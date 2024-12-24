@@ -1,0 +1,60 @@
+networks:
+  Grid:
+    driver: bridge
+
+services:
+  hub:
+    image: selenium/hub:4.13.0
+    container_name: hub
+    networks:
+      - Grid
+    ports:
+      - "4444:4444" # Expose Selenium Hub on port 4444
+    environment:
+      - GRID_MAX_SESSION=5
+      - GRID_BROWSER_TIMEOUT=60
+      - GRID_TIMEOUT=60
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4444/wd/hub/status"]
+      interval: 30s
+      retries: 3
+      timeout: 20s
+      start_period: 10s
+
+  node-chrome:
+    image: selenium/node-chrome:4.13.0
+    container_name: node-chrome
+    depends_on:
+      - hub
+    networks:
+      - Grid
+    environment:
+      - SE_EVENT_BUS_HOST=hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+    shm_size: "2g" # Increase shared memory for Chrome
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5555/wd/hub/status"]
+      interval: 30s
+      retries: 3
+      timeout: 20s
+      start_period: 10s
+
+  node-firefox:
+    image: selenium/node-firefox:4.13.0
+    container_name: node-firefox
+    depends_on:
+      - hub
+    networks:
+      - Grid
+    environment:
+      - SE_EVENT_BUS_HOST=hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+    shm_size: "2g" # Increase shared memory for Firefox
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5555/wd/hub/status"]
+      interval: 30s
+      retries: 3
+      timeout: 20s
+      start_period: 10s
